@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:logbook_modul4/features/onboarding/onboarding_view.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'features/onboarding/onboarding_view.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env");
   runApp(const MyApp());
 }
 
@@ -11,10 +14,13 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Modul 2 App',
+      title: 'Logbook App',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue)),
-      home: const OnboardingView(), // Pintu Masuk
+      theme: ThemeData(
+        primarySwatch: Colors.deepPurple,
+        useMaterial3: true,
+      ),
+      home: const OnboardingView(),
     );
   }
 }
