@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:developer' as dev;
 import 'package:intl/intl.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -16,11 +17,27 @@ class LogHelper {
 
     try {
       String timestamp = DateFormat('HH:mm:ss').format(DateTime.now());
+      String dateString = DateFormat('dd-MM-yyyy').format(DateTime.now());
       String label = _getLabel(level);
       String color = _getColor(level);
 
+      String logEntry = '[$timestamp][$label][$source] -> $message';
+
+      // 1. Output ke konsol/terminal
       dev.log(message, name: source, time: DateTime.now(), level: level * 100);
-      print('$color[$timestamp][$label][$source] -> $message\x1B[0m');
+      print('$color$logEntry\x1B[0m');
+
+      // 2. Output ke file fisik (.log) di folder /logs
+      try {
+        final directory = Directory('logs');
+        if (!await directory.exists()) {
+          await directory.create();
+        }
+        final file = File('logs/$dateString.log');
+        await file.writeAsString('$logEntry\n', mode: FileMode.append);
+      } catch (e) {
+        // Abaikan error jika aplikasi dijalankan di peramban Web (Chrome)
+      }
     } catch (e) {
       dev.log("Logging failed: $e", name: "SYSTEM", level: 1000);
     }
