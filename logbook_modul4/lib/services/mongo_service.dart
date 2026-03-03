@@ -1,6 +1,6 @@
 import 'package:mongo_dart/mongo_dart.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:logbook_modul4/features/logbook/models/log_model.dart';
+import '../features/logbook/models/log_model.dart';
 import '../helpers/log_helper.dart';
 
 class MongoService {
@@ -69,7 +69,11 @@ class MongoService {
         level: 3,
       );
 
-      final List<Map<String, dynamic>> data = await collection.find().toList();
+      // Tambahkan timeout 10 detik saat offline
+      final List<Map<String, dynamic>> data = await collection.find().toList().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => throw Exception("Waktu tunggu habis (Timeout)"),
+      );
       return data.map((json) => LogModel.fromMap(json)).toList();
     } catch (e) {
       await LogHelper.writeLog(
@@ -77,7 +81,7 @@ class MongoService {
         source: _source,
         level: 1,
       );
-      return [];
+      rethrow; // KUNCI PERBAIKAN: Lempar error-nya, jangan kembalikan list kosong []
     }
   }
 

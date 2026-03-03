@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:mongo_dart/mongo_dart.dart';
 
-// --- JALUR IMPORT YANG SUDAH DISESUAIKAN ---
-import 'models/log_model.dart'; // Karena model ada di dalam folder logbook yang sama
-import '../../services/mongo_service.dart'; // Mundur ke lib/ lalu masuk ke services
-import '../../helpers/log_helper.dart'; // Mundur ke lib/ lalu masuk ke helpers
+import 'models/log_model.dart';
+import '../../services/mongo_service.dart';
+import '../../helpers/log_helper.dart';
 
 class LogController {
   final ValueNotifier<List<LogModel>> logsNotifier = ValueNotifier<List<LogModel>>([]);
@@ -12,7 +11,7 @@ class LogController {
   List<LogModel> get logs => logsNotifier.value;
 
   LogController() {
-    loadFromDisk();
+    // Dikosongkan karena inisialisasi awal sudah ditangani oleh log_view.dart
   }
 
   Future<void> addLog(String title, String desc, String category) async {
@@ -32,7 +31,7 @@ class LogController {
       logsNotifier.value = currentLogs;
 
       await LogHelper.writeLog(
-        "SUCCESS: Tambah data dengan ID lokal",
+        "SUCCESS: Tambah data ke Cloud berhasil",
         source: "log_controller.dart",
         level: 2,
       );
@@ -45,23 +44,27 @@ class LogController {
     }
   }
 
-  Future<void> updateLog(int index, String newTitle, String newDesc, String category) async {
-    final currentLogs = List<LogModel>.from(logsNotifier.value);
-    final oldLog = currentLogs[index];
-
+  // DIUBAH: Sekarang menggunakan LogModel target, bukan index
+  Future<void> updateLog(LogModel oldLog, String newTitle, String newDesc, String category) async {
     final updatedLog = LogModel(
       id: oldLog.id,
       title: newTitle,
       description: newDesc,
       category: category,
-      date: DateTime.now().toString(),
+      date: DateTime.now().toString(), // Update waktu saat diedit
     );
 
     try {
       await MongoService().updateLog(updatedLog);
 
-      currentLogs[index] = updatedLog;
-      logsNotifier.value = currentLogs;
+      final currentLogs = List<LogModel>.from(logsNotifier.value);
+      // Cari posisi log yang sedang diedit berdasarkan ID-nya
+      final index = currentLogs.indexWhere((log) => log.id == oldLog.id);
+
+      if (index != -1) {
+        currentLogs[index] = updatedLog;
+        logsNotifier.value = currentLogs;
+      }
 
       await LogHelper.writeLog(
         "SUCCESS: Sinkronisasi Update Berhasil",
@@ -77,10 +80,8 @@ class LogController {
     }
   }
 
-  Future<void> removeLog(int index) async {
-    final currentLogs = List<LogModel>.from(logsNotifier.value);
-    final targetLog = currentLogs[index];
-
+  // DIUBAH: Sekarang menggunakan LogModel target, bukan index
+  Future<void> removeLog(LogModel targetLog) async {
     try {
       if (targetLog.id == null) {
         throw Exception("ID Log tidak ditemukan, tidak bisa menghapus di Cloud.");
@@ -88,7 +89,9 @@ class LogController {
 
       await MongoService().deleteLog(targetLog.id!);
 
-      currentLogs.removeAt(index);
+      final currentLogs = List<LogModel>.from(logsNotifier.value);
+      // Hapus data dari daftar lokal berdasarkan ID-nya
+      currentLogs.removeWhere((log) => log.id == targetLog.id);
       logsNotifier.value = currentLogs;
 
       await LogHelper.writeLog(
@@ -115,6 +118,7 @@ class LogController {
         source: "log_controller.dart",
         level: 1,
       );
+      rethrow;
     }
   }
 }
