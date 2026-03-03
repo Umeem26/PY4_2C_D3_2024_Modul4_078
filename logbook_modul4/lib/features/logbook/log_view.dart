@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'dart:ui'; // Ditambahkan untuk efek Blur (Glassmorphism)
+import 'dart:ui';
+import 'dart:math' as math;
 import 'package:intl/intl.dart';
-import 'dart:math' as Math;// Ditambahkan untuk animasi sinusoidal pada efek awan
 import 'log_controller.dart';
 import 'models/log_model.dart';
 import '../auth/login_view.dart';
@@ -40,12 +40,13 @@ class _LogViewState extends State<LogView> {
     try {
       await MongoService().connect().timeout(
         const Duration(seconds: 15),
-        onTimeout: () => throw Exception("Koneksi Cloud Timeout. Periksa sinyal/IP Whitelist."),
+        onTimeout: () => throw Exception("Koneksi Cloud Timeout."),
       );
       await _controller.loadFromDisk();
     } catch (e) {
       if (mounted) {
-        _showCustomToast("Masalah Koneksi: $e", isError: true);
+        // SOLUSI: Pesan error diperhalus
+        _showCustomToast("Gagal terhubung ke Cloud. Periksa koneksi internet Anda.", isError: true);
       }
     } finally {
       if (mounted) {
@@ -54,7 +55,6 @@ class _LogViewState extends State<LogView> {
     }
   }
 
-  // FITUR BARU: Floating Toast Notification yang Elegan
   void _showCustomToast(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -93,7 +93,6 @@ class _LogViewState extends State<LogView> {
     }
   }
 
-  // FITUR BARU: Skeleton Loading Layout
   Widget _buildSkeletonLoading() {
     return ListView.builder(
       physics: const NeverScrollableScrollPhysics(),
@@ -142,8 +141,8 @@ class _LogViewState extends State<LogView> {
   void _showLogoutConfirmation() {
     showDialog(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.3), // Transparansi latar
-      builder: (context) => BackdropFilter( // FITUR BARU: Glassmorphism Blur
+      barrierColor: Colors.black.withOpacity(0.3),
+      builder: (context) => BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
         child: Dialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
@@ -212,7 +211,7 @@ class _LogViewState extends State<LogView> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       barrierColor: Colors.black.withOpacity(0.3),
-      builder: (context) => BackdropFilter( // FITUR BARU: Glassmorphism Blur
+      builder: (context) => BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
         child: StatefulBuilder(
           builder: (context, setStateSheet) {
@@ -364,7 +363,7 @@ class _LogViewState extends State<LogView> {
               valueListenable: _controller.logsNotifier,
               builder: (context, currentLogs, child) {
                 if (_isLoading) {
-                  return _buildSkeletonLoading(); // Memanggil efek skeleton baru
+                  return _buildSkeletonLoading();
                 }
 
                 List<LogModel> displayLogs = currentLogs;
@@ -376,7 +375,14 @@ class _LogViewState extends State<LogView> {
 
                 if (currentLogs.isEmpty) {
                   return RefreshIndicator(
-                    onRefresh: () async { try { await _controller.loadFromDisk(); } catch (e) { _showCustomToast("Gagal refresh: $e", isError: true); } },
+                    onRefresh: () async { 
+                      try { 
+                        await _controller.loadFromDisk(); 
+                      } catch (e) { 
+                        // SOLUSI: Pesan error diperhalus
+                        _showCustomToast("Koneksi terputus. Gagal menyegarkan data.", isError: true); 
+                      } 
+                    },
                     child: ListView(
                       physics: const AlwaysScrollableScrollPhysics(),
                       children: [
@@ -385,14 +391,13 @@ class _LogViewState extends State<LogView> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center, 
                             children: [
-                              // FITUR BARU: Animated Hovering Cloud
                               TweenAnimationBuilder<double>(
                                 tween: Tween(begin: 0.0, end: 1.0),
                                 duration: const Duration(seconds: 2),
                                 curve: Curves.easeInOutSine,
                                 builder: (context, value, child) {
                                   return Transform.translate(
-                                    offset: Offset(0, 15 * Math.sin(value * 3.14)), // Animasi naik turun
+                                    offset: Offset(0, 15 * math.sin(value * 3.14)),
                                     child: child,
                                   );
                                 },
@@ -425,7 +430,14 @@ class _LogViewState extends State<LogView> {
 
                 return RefreshIndicator(
                   color: Colors.deepPurple,
-                  onRefresh: () async { try { await _controller.loadFromDisk(); } catch (e) { _showCustomToast("Gagal refresh: $e", isError: true); } },
+                  onRefresh: () async { 
+                    try { 
+                      await _controller.loadFromDisk(); 
+                    } catch (e) { 
+                      // SOLUSI: Pesan error diperhalus
+                      _showCustomToast("Koneksi terputus. Gagal menyegarkan data.", isError: true); 
+                    } 
+                  },
                   child: ListView.builder(
                     physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
                     padding: const EdgeInsets.only(top: 8, bottom: 100),
@@ -438,7 +450,8 @@ class _LogViewState extends State<LogView> {
                       try {
                         DateTime parsedDate = DateTime.parse(log.date);
                         formattedDate = DateFormat('dd MMM yyyy • HH:mm').format(parsedDate);
-                      } catch (e) { /* ignore */ }
+                      } catch (e) {
+                      }
                       
                       return Dismissible(
                         key: Key(log.id?.toHexString() ?? log.date),
@@ -448,7 +461,7 @@ class _LogViewState extends State<LogView> {
                             context: context,
                             barrierColor: Colors.black.withOpacity(0.3),
                             builder: (BuildContext context) {
-                              return BackdropFilter( // FITUR BARU: Blur pada Delete
+                              return BackdropFilter(
                                 filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
                                 child: AlertDialog(
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)), 
